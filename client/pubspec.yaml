@@ -1,0 +1,4 @@
+name: client
+
+dependencies:
+  web_socket_channel: ^2.4.0
