@@ -85,5 +85,11 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/ws", handleWebSocket)
 	log.Println("Server started on :8080")
+	client, err := server_module.ConnectMongoDB()
+	if err != nil {
+		log.Fatal("MongoDB 연결 실패:", err)
+	}
+	server_module.MessageLog.Client = client
+
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

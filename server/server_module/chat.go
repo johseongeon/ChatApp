@@ -1,13 +1,25 @@
 package server_module
 
 import (
-	"encoding/json"
-	"os"
+	"context"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func ConnectMongoDB() (*mongo.Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
 
 type Client struct {
 	Username string // identifier
@@ -33,14 +45,15 @@ var RoomMgr = &RoomManager{
 }
 
 type ChatMessage struct {
-	Username  string    `json:"username"`
-	Message   string    `json:"message"`
-	RoomID    string    `json:"room_id"`
-	Timestamp time.Time `json:"timestamp"`
+	Username  string    `json:"username" bson:"username"`
+	Message   string    `json:"message" bson:"message"`
+	RoomID    string    `json:"room_id" bson:"room_id"`
+	Timestamp time.Time `json:"timestamp" bson:"timestamp"`
 }
 
 type MessageLogger struct {
-	Mu sync.Mutex
+	Mu     sync.Mutex
+	Client *mongo.Client
 }
 
 var MessageLog = &MessageLogger{}
@@ -49,27 +62,15 @@ func (ml *MessageLogger) LogMessage(msg ChatMessage) error {
 	ml.Mu.Lock()
 	defer ml.Mu.Unlock()
 
-	var logs []ChatMessage
-	file, err := os.OpenFile("logs.json", os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	if stat, err := file.Stat(); err == nil && stat.Size() > 0 {
-		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&logs); err != nil {
-			return err
-		}
-	}
+	collection := ml.Client.
+		Database("ChatDB").
+		Collection("messages")
 
-	logs = append(logs, msg)
-
-	file.Seek(0, 0)
-	file.Truncate(0)
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(logs)
+	_, err := collection.InsertOne(ctx, msg)
+	return err
 }
 
 func (rm *RoomManager) GetOrCreateRoom(roomID string) *ChatRoom {
