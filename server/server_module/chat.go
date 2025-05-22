@@ -12,6 +12,7 @@ type Client struct {
 	Username string // identifier
 	Conn     *websocket.Conn
 	Rooms    map[string]*ChatRoom
+	Friends  map[string]*Client
 	Mu       sync.RWMutex
 }
 

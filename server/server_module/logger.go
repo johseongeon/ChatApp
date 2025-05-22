@@ -8,14 +8,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type MessageLogger struct {
+type Logger struct {
 	Mu     sync.Mutex
 	Client *mongo.Client
 }
 
-var MessageLog = &MessageLogger{}
+var MessageLog = &Logger{}
 
-func (ml *MessageLogger) LogMessage(msg ChatMessage) error {
+var UserLog = &Logger{}
+
+func (ml *Logger) LogMessage(msg ChatMessage) error {
 	ml.Mu.Lock()
 	defer ml.Mu.Unlock()
 

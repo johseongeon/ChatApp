@@ -6,25 +6,18 @@ import (
 	"log"
 	"net/http"
 	"server/server_module"
-	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type messageCollection struct {
-	messageCol *mongo.Collection
-	Mu         sync.Mutex
-}
-
-var Collection = &messageCollection{}
+var Collection = &server_module.MessageCollection{}
 
 func getChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	roomID := r.URL.Query().Get("room_id")
 	if roomID == "" {
-		http.Error(w, "room_id 쿼리 파라미터가 필요합니다", http.StatusBadRequest)
+		http.Error(w, "room_id query parameter requried.", http.StatusBadRequest)
 		return
 	}
 
@@ -37,9 +30,9 @@ func getChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cursor, err := Collection.messageCol.Find(ctx, filter, options.Find().SetProjection(projection))
+	cursor, err := Collection.MessageCol.Find(ctx, filter, options.Find().SetProjection(projection))
 	if err != nil {
-		http.Error(w, "MongoDB 조회 실패", http.StatusInternalServerError)
+		http.Error(w, "Failed to Find MongoDB", http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(ctx)
@@ -65,17 +58,17 @@ func main() {
 	// MongoDB 연결
 	client, err := server_module.ConnectMongoDB()
 	if err != nil {
-		log.Fatal("MongoDB 연결 실패:", err)
+		log.Fatal("Failed to connect MongoDB:", err)
 	}
 
 	// 컬렉션 지정
-	Collection.messageCol = client.Database("ChatDB").Collection("messages")
+	Collection.MessageCol = client.Database("ChatDB").Collection("messages")
 
 	// HTTP 핸들러 등록
 	http.HandleFunc("/history", getChatHistoryHandler)
 
-	log.Println("chat_history_provider 서버 시작: :8082")
-	if err := http.ListenAndServe(":8082", nil); err != nil {
-		log.Fatalf("서버 실행 실패: %v", err)
+	log.Println("chat_history_provider server start: :8081")
+	if err := http.ListenAndServe(":8081", nil); err != nil {
+		log.Fatalf("failed to start server: %v", err)
 	}
 }
