@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -71,6 +72,35 @@ func (adder *UserManager) AddFriend(c *server_module.Client, friend string) {
 	}
 }
 
+func (adder *UserManager) RemoveFriend(c *server_module.Client, friend string) {} // 추가 필요
+
+func (adder *UserManager) GetFriends(c *server_module.Client) []string {
+	adder.Mu.Lock()
+	defer adder.Mu.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collection := adder.Client.Database("ChatDB").Collection("users")
+
+	filter := map[string]interface{}{"username": c.Username}
+	projection := map[string]interface{}{
+		"friends": 1,
+	}
+
+	var result struct {
+		Friends []string `bson:"friends"`
+	}
+
+	err := collection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		log.Println("Error getting friends:", err)
+		return nil
+	}
+
+	return result.Friends
+}
+
 func RegisterServer(client *mongo.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username := r.URL.Query().Get("username")
@@ -96,7 +126,6 @@ func main() {
 
 	http.HandleFunc("/register", RegisterServer(client))
 
-	// 예: /addFriend?username=A&friend=B
 	http.HandleFunc("/addFriend", func(w http.ResponseWriter, r *http.Request) {
 		username := r.URL.Query().Get("username")
 		friend := r.URL.Query().Get("friend")
@@ -107,6 +136,26 @@ func main() {
 		clientObj := &server_module.Client{Username: username}
 		userManager.AddFriend(clientObj, friend)
 		w.Write([]byte("Friend added successfully"))
+	})
+
+	http.HandleFunc("/getFriends", func(w http.ResponseWriter, r *http.Request) {
+		username := r.URL.Query().Get("username")
+		if username == "" {
+			http.Error(w, "username is required", http.StatusBadRequest)
+			return
+		}
+		clientObj := &server_module.Client{Username: username}
+		friends := userManager.GetFriends(clientObj)
+		if friends == nil {
+			http.Error(w, "Failed to get friends", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"username": username,
+			"friends":  friends,
+		})
 	})
 
 	fmt.Println("Server started on :8082")
