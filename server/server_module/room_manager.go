@@ -1,17 +1,25 @@
 package server_module
 
 import (
+	"context"
+	"log"
 	"sync"
+	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // handles all chat room operations
 type RoomManager struct {
-	Rooms map[string]*ChatRoom
-	Mu    sync.RWMutex
+	Rooms  map[string]*ChatRoom
+	Mu     sync.RWMutex
+	Client *mongo.Client
 }
 
 var RoomMgr = &RoomManager{
-	Rooms: make(map[string]*ChatRoom),
+	Rooms:  make(map[string]*ChatRoom),
+	Client: nil,
 }
 
 func (rm *RoomManager) GetOrCreateRoom(roomID string) *ChatRoom {
@@ -45,6 +53,27 @@ func (c *Client) JoinRoom(room *ChatRoom) {
 
 	c.Rooms[room.Id] = room
 	room.Clients[c] = true
+
+	// Update the MongoDB collection to add the room to the user's list
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collection := RoomMgr.Client.Database("ChatDB").Collection("users")
+
+	filter := map[string]interface{}{"username": c.Username}
+	update := map[string]interface{}{
+		"$addToSet": map[string]interface{}{
+			"rooms": room.Id,
+		},
+	}
+
+	opts := options.Update().SetUpsert(true)
+
+	_, err := collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		log.Println("Error joining room :", err)
+		return
+	}
 }
 
 func (c *Client) LeaveRoom(roomID string) {

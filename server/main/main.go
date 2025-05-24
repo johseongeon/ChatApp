@@ -90,6 +90,7 @@ func main() {
 		log.Fatal("MongoDB 연결 실패:", err)
 	}
 	server_module.MessageLog.Client = client
+	server_module.RoomMgr.Client = client
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

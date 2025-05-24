@@ -35,6 +35,7 @@ func RegisterUser(client *mongo.Client, username string) {
 		"$setOnInsert": map[string]interface{}{
 			"username": username,
 			"friends":  []string{},
+			"rooms":    []string{},
 		},
 	}
 	opts := options.Update().SetUpsert(true)
@@ -63,7 +64,7 @@ func (adder *UserManager) AddFriend(c *server_module.Client, friend string) {
 			"friends": friend,
 		},
 	}
-	opts := options.Update().SetUpsert(true) // 없으면 새로 만듦
+	opts := options.Update().SetUpsert(true)
 
 	_, err := collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
@@ -99,6 +100,33 @@ func (adder *UserManager) GetFriends(c *server_module.Client) []string {
 	}
 
 	return result.Friends
+}
+
+func (adder *UserManager) GetChatRooms(c *server_module.Client) []string {
+	adder.Mu.Lock()
+	defer adder.Mu.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collection := adder.Client.Database("ChatDB").Collection("users")
+
+	filter := map[string]interface{}{"username": c.Username}
+	projection := map[string]interface{}{
+		"rooms": 1,
+	}
+
+	var result struct {
+		Rooms []string `bson:"rooms"`
+	}
+
+	err := collection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		log.Println("Error getting rooms:", err)
+		return nil
+	}
+
+	return result.Rooms
 }
 
 func RegisterServer(client *mongo.Client) http.HandlerFunc {
@@ -155,6 +183,26 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"username": username,
 			"friends":  friends,
+		})
+	})
+
+	http.HandleFunc("/getRooms", func(w http.ResponseWriter, r *http.Request) {
+		username := r.URL.Query().Get("username")
+		if username == "" {
+			http.Error(w, "username is required", http.StatusBadRequest)
+			return
+		}
+		clientObj := &server_module.Client{Username: username}
+		rooms := userManager.GetChatRooms(clientObj)
+		if rooms == nil {
+			http.Error(w, "Failed to get rooms", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"username": username,
+			"rooms":    rooms,
 		})
 	})
 
