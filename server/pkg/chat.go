@@ -1,4 +1,4 @@
-package server_module
+package pkg
 
 import (
 	"sync"

@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"server/server_module"
+	"server/pkg"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -32,13 +32,13 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &server_module.Client{
+	client := &pkg.Client{
 		Username: initMsg.Username,
 		Conn:     conn,
-		Rooms:    make(map[string]*server_module.ChatRoom),
+		Rooms:    make(map[string]*pkg.ChatRoom),
 	}
 
-	room := server_module.RoomMgr.GetOrCreateRoom(initMsg.ChatID)
+	room := pkg.RoomMgr.GetOrCreateRoom(initMsg.ChatID)
 	client.JoinRoom(room)
 	log.Printf("User %s joined chat %s", client.Username, room.Id)
 
@@ -65,13 +65,13 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			roomID = msg.RoomID
 		}
 
-		chatMsg := server_module.ChatMessage{
+		chatMsg := pkg.ChatMessage{
 			Username:  client.Username,
 			Message:   msg.Message,
 			RoomID:    roomID,
 			Timestamp: time.Now(),
 		}
-		if err := server_module.MessageLog.LogMessage(chatMsg); err != nil {
+		if err := pkg.MessageLog.LogMessage(chatMsg); err != nil {
 			log.Printf("Failed to log message: %v", err)
 		}
 
@@ -85,12 +85,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/ws", handleWebSocket)
 	log.Println("Server started on :8080")
-	client, err := server_module.ConnectMongoDB()
+	client, err := pkg.ConnectMongoDB()
 	if err != nil {
 		log.Fatal("MongoDB 연결 실패:", err)
 	}
-	server_module.MessageLog.Client = client
-	server_module.RoomMgr.Client = client
+	pkg.MessageLog.Client = client
+	pkg.RoomMgr.Client = client
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

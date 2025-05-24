@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"server/server_module"
+	"server/pkg"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var Collection = &server_module.MessageCollection{}
+var Collection = &pkg.MessageCollection{}
 
 func getChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	roomID := r.URL.Query().Get("room_id")
@@ -56,7 +56,7 @@ func getChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// MongoDB 연결
-	client, err := server_module.ConnectMongoDB()
+	client, err := pkg.ConnectMongoDB()
 	if err != nil {
 		log.Fatal("Failed to connect MongoDB:", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"server/server_module"
+	"server/pkg"
 	"sync"
 	"time"
 
@@ -21,7 +21,7 @@ type UserManager struct {
 
 var UserManagerInstance = &UserManager{}
 
-var Collection = &server_module.MessageCollection{}
+var Collection = &pkg.MessageCollection{}
 
 func RegisterUser(client *mongo.Client, username string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -49,7 +49,7 @@ func RegisterUser(client *mongo.Client, username string) {
 	fmt.Println("User registered:", username)
 }
 
-func (adder *UserManager) AddFriend(c *server_module.Client, friend string) {
+func (adder *UserManager) AddFriend(c *pkg.Client, friend string) {
 	adder.Mu.Lock()
 	defer adder.Mu.Unlock()
 
@@ -73,9 +73,9 @@ func (adder *UserManager) AddFriend(c *server_module.Client, friend string) {
 	}
 }
 
-func (adder *UserManager) RemoveFriend(c *server_module.Client, friend string) {} // 추가 필요
+func (adder *UserManager) RemoveFriend(c *pkg.Client, friend string) {} // 추가 필요
 
-func (adder *UserManager) GetFriends(c *server_module.Client) []string {
+func (adder *UserManager) GetFriends(c *pkg.Client) []string {
 	adder.Mu.Lock()
 	defer adder.Mu.Unlock()
 
@@ -102,7 +102,7 @@ func (adder *UserManager) GetFriends(c *server_module.Client) []string {
 	return result.Friends
 }
 
-func (adder *UserManager) GetChatRooms(c *server_module.Client) []string {
+func (adder *UserManager) GetChatRooms(c *pkg.Client) []string {
 	adder.Mu.Lock()
 	defer adder.Mu.Unlock()
 
@@ -144,7 +144,7 @@ func RegisterServer(client *mongo.Client) http.HandlerFunc {
 // curl http://localhost:8082/register?username=A
 // curl "http://localhost:8082/addFriend?username=A&friend=B"
 func main() {
-	client, err := server_module.ConnectMongoDB()
+	client, err := pkg.ConnectMongoDB()
 	if err != nil {
 		log.Fatal("MongoDB 연결 실패:", err)
 	}
@@ -161,7 +161,7 @@ func main() {
 			http.Error(w, "username and friend are required", http.StatusBadRequest)
 			return
 		}
-		clientObj := &server_module.Client{Username: username}
+		clientObj := &pkg.Client{Username: username}
 		userManager.AddFriend(clientObj, friend)
 		w.Write([]byte("Friend added successfully"))
 	})
@@ -172,7 +172,7 @@ func main() {
 			http.Error(w, "username is required", http.StatusBadRequest)
 			return
 		}
-		clientObj := &server_module.Client{Username: username}
+		clientObj := &pkg.Client{Username: username}
 		friends := userManager.GetFriends(clientObj)
 		if friends == nil {
 			http.Error(w, "Failed to get friends", http.StatusInternalServerError)
@@ -192,7 +192,7 @@ func main() {
 			http.Error(w, "username is required", http.StatusBadRequest)
 			return
 		}
-		clientObj := &server_module.Client{Username: username}
+		clientObj := &pkg.Client{Username: username}
 		rooms := userManager.GetChatRooms(clientObj)
 		if rooms == nil {
 			http.Error(w, "Failed to get rooms", http.StatusInternalServerError)
