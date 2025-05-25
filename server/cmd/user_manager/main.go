@@ -155,6 +155,7 @@ func main() {
 	http.HandleFunc("/register", RegisterServer(client))
 
 	http.HandleFunc("/addFriend", func(w http.ResponseWriter, r *http.Request) {
+		pkg.EnableCORS(w)
 		username := r.URL.Query().Get("username")
 		friend := r.URL.Query().Get("friend")
 		if username == "" || friend == "" {
@@ -167,6 +168,7 @@ func main() {
 	})
 
 	http.HandleFunc("/getFriends", func(w http.ResponseWriter, r *http.Request) {
+		pkg.EnableCORS(w)
 		username := r.URL.Query().Get("username")
 		if username == "" {
 			http.Error(w, "username is required", http.StatusBadRequest)
@@ -187,6 +189,7 @@ func main() {
 	})
 
 	http.HandleFunc("/getRooms", func(w http.ResponseWriter, r *http.Request) {
+		pkg.EnableCORS(w)
 		username := r.URL.Query().Get("username")
 		if username == "" {
 			http.Error(w, "username is required", http.StatusBadRequest)

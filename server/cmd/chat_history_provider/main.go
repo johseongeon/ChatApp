@@ -15,6 +15,7 @@ import (
 var Collection = &pkg.MessageCollection{}
 
 func getChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	pkg.EnableCORS(w)
 	roomID := r.URL.Query().Get("room_id")
 	if roomID == "" {
 		http.Error(w, "room_id query parameter requried.", http.StatusBadRequest)

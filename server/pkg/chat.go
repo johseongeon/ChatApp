@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"net/http"
 	"sync"
 	"time"
 
@@ -35,6 +36,10 @@ type ClusterManager struct {
 }
 
 var ClusterMgr = &ClusterManager{}
+
+func EnableCORS(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+}
 
 func (c *Client) BroadcastToRoom(roomID string, message map[string]string) {
 	c.Mu.RLock()
