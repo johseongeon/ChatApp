@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -22,7 +23,7 @@ var RoomMgr = &RoomManager{
 	Client: nil,
 }
 
-func (rm *RoomManager) GetOrCreateRoom(roomID string) *ChatRoom {
+func (rm *RoomManager) GetRoom(roomID string) *ChatRoom {
 	rm.Mu.Lock()
 	defer rm.Mu.Unlock()
 
@@ -30,18 +31,54 @@ func (rm *RoomManager) GetOrCreateRoom(roomID string) *ChatRoom {
 		return room
 	}
 
+	return nil
+}
+
+func (rm *RoomManager) CreateRoom(roomID string) {
+	rm.Mu.Lock()
+	defer rm.Mu.Unlock()
+
 	room := &ChatRoom{
 		Id:      roomID,
 		Clients: make(map[*Client]bool),
 	}
 	rm.Rooms[roomID] = room
-	return room
+
+	// Update the MongoDB collection to add the room
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	collection := rm.Client.Database("ChatDB").Collection("rooms")
+	filter := map[string]interface{}{"room_id": roomID}
+	update := map[string]interface{}{
+		"$setOnInsert": map[string]interface{}{
+			"room_id": roomID,
+			"clients": []string{},
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+	_, err := collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		log.Println("Error creating room:", err)
+		return
+	}
 }
 
 func (rm *RoomManager) RemoveRoom(roomID string) {
 	rm.Mu.Lock()
 	defer rm.Mu.Unlock()
 	delete(rm.Rooms, roomID)
+
+	// Update the MongoDB collection to remove the room
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	collection := rm.Client.Database("ChatDB").Collection("rooms")
+	filter := bson.M{"room_id": roomID}
+	_, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		log.Println("Error removing room:", err)
+		return
+	}
+
 }
 
 func (c *Client) JoinRoom(room *ChatRoom) {
@@ -58,7 +95,7 @@ func (c *Client) JoinRoom(room *ChatRoom) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := RoomMgr.Client.Database("ChatDB").Collection("users")
+	user_collection := RoomMgr.Client.Database("ChatDB").Collection("users")
 
 	filter := map[string]interface{}{"username": c.Username}
 	update := map[string]interface{}{
@@ -69,7 +106,7 @@ func (c *Client) JoinRoom(room *ChatRoom) {
 
 	opts := options.Update().SetUpsert(true)
 
-	_, err := collection.UpdateOne(ctx, filter, update, opts)
+	_, err := user_collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
 		log.Println("Error joining room :", err)
 		return
