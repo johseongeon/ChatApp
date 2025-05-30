@@ -14,6 +14,10 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+var userManager = &pkg.UserManager{
+	Client: pkg.ClusterMgr.Client,
+}
+
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -38,9 +42,21 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Rooms:    make(map[string]*pkg.ChatRoom),
 	}
 
-	room := pkg.RoomMgr.GetRoom(initMsg.ChatID)
-	pkg.RoomMgr.JoinRoom(client, room)
-	log.Printf("User %s joined chat %s", client.Username, room.Id)
+	roomIDs := userManager.GetChatRooms(client)
+	for _, roomID := range roomIDs {
+		room := pkg.RoomMgr.GetRoom(roomID)
+
+		if room != nil {
+			client.Rooms[roomID] = room
+			room.Mu.Lock()
+			room.Clients[client] = true
+			room.Mu.Unlock()
+
+		} else {
+			log.Printf("Warning: Room '%s' found in user's history but not currently active on server.", roomID)
+		}
+	}
+	log.Printf("User %s joined chat %s", client.Username, initMsg.ChatID)
 
 	defer func() {
 		for roomID := range client.Rooms {
