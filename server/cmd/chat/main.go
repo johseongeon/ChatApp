@@ -39,7 +39,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	room := pkg.RoomMgr.GetRoom(initMsg.ChatID)
-	client.JoinRoom(room)
+	pkg.RoomMgr.JoinRoom(client, room)
 	log.Printf("User %s joined chat %s", client.Username, room.Id)
 
 	defer func() {

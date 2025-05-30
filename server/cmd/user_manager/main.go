@@ -29,7 +29,6 @@ func RegisterUser(client *mongo.Client, username string) {
 
 	collection := client.Database("ChatDB").Collection("users")
 
-	// 중복 방지
 	filter := map[string]interface{}{"username": username}
 	update := map[string]interface{}{
 		"$setOnInsert": map[string]interface{}{
