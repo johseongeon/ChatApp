@@ -42,28 +42,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Rooms:    make(map[string]*pkg.ChatRoom),
 	}
 
-	roomIDs := userManager.GetChatRooms(client)
-	for _, roomID := range roomIDs {
-		room := pkg.RoomMgr.GetRoom(roomID)
-
-		if room != nil {
-			client.Rooms[roomID] = room
-			room.Mu.Lock()
-			room.Clients[client] = true
-			room.Mu.Unlock()
-
-		} else {
-			log.Printf("Warning: Room '%s' found in user's history but not currently active on server.", roomID)
-		}
-	}
+	chatroom := pkg.RoomMgr.GetRoom(initMsg.ChatID)
+	pkg.RoomMgr.ConnectToRoom(client, chatroom)
 	log.Printf("User %s joined chat %s", client.Username, initMsg.ChatID)
-
-	defer func() {
-		for roomID := range client.Rooms {
-			client.LeaveRoom(roomID)
-		}
-		conn.Close()
-	}()
 
 	for {
 		var msg struct {
@@ -107,6 +88,8 @@ func main() {
 	}
 	pkg.MessageLog.Client = client
 	pkg.RoomMgr.Client = client
+
+	pkg.RoomMgr.LoadRoomsFromDB()
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

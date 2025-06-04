@@ -12,7 +12,7 @@ void main(List<String> args) async {
   final String username = args[0];
   final String chatId = args[1];
 
-  final Uri uri = Uri.parse('ws://192.168.0.12:8080/ws');
+  final Uri uri = Uri.parse('ws://localhost:8080/ws');
 
   try {
     final IOWebSocketChannel channel = IOWebSocketChannel.connect(uri);

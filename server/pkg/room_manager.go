@@ -34,6 +34,78 @@ func (rm *RoomManager) GetRoom(roomID string) *ChatRoom {
 	return nil
 }
 
+/*
+func (rm *RoomManager) GetAllRooms(c *Client) []*ChatRoom {
+	rm.Mu.RLock()
+	defer rm.Mu.RUnlock()
+
+	rooms := make(map[string]*ChatRoom)
+
+	return rooms
+}
+*/
+
+func (mgr *RoomManager) LoadRoomsFromDB() {
+	mgr.Mu.Lock()
+	defer mgr.Mu.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collection := mgr.Client.Database("ChatDB").Collection("rooms")
+	cursor, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		log.Printf("Error loading rooms from DB: %v", err)
+		return
+	}
+	defer cursor.Close(ctx)
+
+	mgr.Rooms = make(map[string]*ChatRoom) // initialize the map
+
+	for cursor.Next(ctx) {
+		var roomDoc struct {
+			RoomID  string   `bson:"room_id"`
+			Clients []string `bson:"clients"` // 클라이언트 목록은 현재 필요 없지만 추후 확장 가능
+		}
+
+		if err := cursor.Decode(&roomDoc); err != nil {
+			log.Printf("Error decoding room document: %v", err)
+			continue
+		}
+
+		mgr.Rooms[roomDoc.RoomID] = &ChatRoom{
+			Id:      roomDoc.RoomID,
+			Clients: make(map[*Client]bool),
+		}
+	}
+
+	if err := cursor.Err(); err != nil {
+		log.Printf("Cursor error after iteration: %v", err)
+	}
+}
+
+func (rm *RoomManager) ConnectToRoom(client *Client, room *ChatRoom) {
+	rm.Mu.Lock()
+	defer rm.Mu.Unlock()
+
+	if room == nil {
+		log.Println("Room is nil, cannot connect.")
+		return
+	}
+
+	room.Mu.Lock()
+	defer room.Mu.Unlock()
+
+	if _, exists := room.Clients[client]; !exists {
+		room.Clients[client] = true
+		client.Rooms[room.Id] = room
+
+		log.Printf("Client %s connected to room %s", client.Username, room.Id)
+	} else {
+		log.Printf("Client %s is already connected to room %s", client.Username, room.Id)
+	}
+}
+
 func (rm *RoomManager) CreateRoom(roomID string) {
 	rm.Mu.Lock()
 	defer rm.Mu.Unlock()
