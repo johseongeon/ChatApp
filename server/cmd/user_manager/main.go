@@ -85,6 +85,15 @@ func main() {
 		})
 	})
 
+	//createRoom
+	http.HandleFunc("/createRoom", func(w http.ResponseWriter, r *http.Request) {
+		pkg.EnableCORS(w)
+		roomID := r.URL.Query().Get("room_id")
+		RoomMgr.CreateRoom(roomID)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("created room successfully"))
+	})
+
 	//joinUser
 	http.HandleFunc("/joinUser", func(w http.ResponseWriter, r *http.Request) {
 		pkg.EnableCORS(w)
