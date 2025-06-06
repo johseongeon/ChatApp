@@ -31,8 +31,15 @@ go run main.go
 try
 
 ```cmd
+//register and add friend
 curl http://localhost:8082/register?username={username}
 curl "http://localhost:8082/addFriend?username={username}&friend={username}"
+
+//create room and invite user
+curl http://localhost:8082/createRoom?room_id={room_id}
+curl "http://localhost:8082/joinUser?room_id={room_id}&username={username}"
+
+//get list of friends and rooms
 curl http://localhost:8082/getFriends?username={username}
 curl http://localhost:8082/getRooms?username={username}
 ```
@@ -40,7 +47,10 @@ curl http://localhost:8082/getRooms?username={username}
 ---
 
 ## real-time chatting server
-- server/cmd/chat/main.go : websocket server for real-time chatting(create room, invite friend to room, and chatting)
+- server/cmd/chat/main.go : websocket server for real-time chatting
+
+- You must create room and invite users to the room before test.
+- If not, it returns a nil value, which causes an error.
 
 start chat server first
 ``` cmd
