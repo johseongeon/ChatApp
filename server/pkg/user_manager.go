@@ -66,8 +66,6 @@ func (adder *UserManager) AddFriend(c *Client, friend string) {
 	}
 }
 
-func (adder *UserManager) RemoveFriend(c *Client, friend string) {} // 추가 필요
-
 func (adder *UserManager) GetFriends(c *Client) []string {
 	adder.Mu.Lock()
 	defer adder.Mu.Unlock()

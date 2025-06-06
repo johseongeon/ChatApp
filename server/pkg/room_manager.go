@@ -34,18 +34,7 @@ func (rm *RoomManager) GetRoom(roomID string) *ChatRoom {
 	return nil
 }
 
-/*
-func (rm *RoomManager) GetAllRooms(c *Client) []*ChatRoom {
-	rm.Mu.RLock()
-	defer rm.Mu.RUnlock()
-
-	rooms := make(map[string]*ChatRoom)
-
-	return rooms
-}
-*/
-
-func (mgr *RoomManager) LoadRoomsFromDB() {
+func LoadRoomsFromDB(mgr *RoomManager) {
 	mgr.Mu.Lock()
 	defer mgr.Mu.Unlock()
 

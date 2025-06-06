@@ -14,9 +14,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-var userManager = &pkg.UserManager{
-	Client: pkg.ClusterMgr.Client,
-}
+var RoomMgr = &pkg.RoomManager{}
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -42,8 +40,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Rooms:    make(map[string]*pkg.ChatRoom),
 	}
 
-	chatroom := pkg.RoomMgr.GetRoom(initMsg.ChatID)
-	pkg.RoomMgr.ConnectToRoom(client, chatroom)
+	chatroom := RoomMgr.GetRoom(initMsg.ChatID)
+	RoomMgr.ConnectToRoom(client, chatroom)
 	log.Printf("User %s joined chat %s", client.Username, initMsg.ChatID)
 
 	for {
@@ -87,9 +85,8 @@ func main() {
 		log.Fatal("MongoDB 연결 실패:", err)
 	}
 	pkg.MessageLog.Client = client
-	pkg.RoomMgr.Client = client
-
-	pkg.RoomMgr.LoadRoomsFromDB()
+	RoomMgr.Client = client
+	pkg.LoadRoomsFromDB(RoomMgr)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

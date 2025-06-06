@@ -12,8 +12,6 @@ var UserManagerInstance = &pkg.UserManager{}
 
 var Collection = &pkg.MessageCollection{}
 
-// curl http://localhost:8082/register?username=A
-// curl "http://localhost:8082/addFriend?username=A&friend=B"
 func main() {
 	client, err := pkg.ConnectMongoDB()
 	if err != nil {
@@ -21,10 +19,15 @@ func main() {
 	}
 
 	userManager := &pkg.UserManager{Client: client}
+	RoomMgr := &pkg.RoomManager{Client: client}
+	pkg.LoadRoomsFromDB(RoomMgr)
+
 	Collection.MessageCol = client.Database("ChatDB").Collection("users")
 
+	//register
 	http.HandleFunc("/register", pkg.RegisterServer(client))
 
+	//addFriend
 	http.HandleFunc("/addFriend", func(w http.ResponseWriter, r *http.Request) {
 		pkg.EnableCORS(w)
 		username := r.URL.Query().Get("username")
@@ -38,6 +41,7 @@ func main() {
 		w.Write([]byte("Friend added successfully"))
 	})
 
+	//getFriends
 	http.HandleFunc("/getFriends", func(w http.ResponseWriter, r *http.Request) {
 		pkg.EnableCORS(w)
 		username := r.URL.Query().Get("username")
@@ -59,6 +63,7 @@ func main() {
 		})
 	})
 
+	//getRooms
 	http.HandleFunc("/getRooms", func(w http.ResponseWriter, r *http.Request) {
 		pkg.EnableCORS(w)
 		username := r.URL.Query().Get("username")
@@ -78,6 +83,18 @@ func main() {
 			"username": username,
 			"rooms":    rooms,
 		})
+	})
+
+	//joinUser
+	http.HandleFunc("/joinUser", func(w http.ResponseWriter, r *http.Request) {
+		pkg.EnableCORS(w)
+		username := r.URL.Query().Get("username")
+		roomID := r.URL.Query().Get("room_id")
+		clientObj := &pkg.Client{Username: username, Rooms: make(map[string]*pkg.ChatRoom)}
+		room := RoomMgr.GetRoom(roomID)
+		RoomMgr.JoinRoom(clientObj, room)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Joined room successfully"))
 	})
 
 	fmt.Println("Server started on :8082")

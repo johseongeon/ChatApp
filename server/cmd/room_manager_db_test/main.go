@@ -17,16 +17,12 @@ func main() {
 		Rooms:  make(map[string]*pkg.ChatRoom),
 	}
 
+	pkg.LoadRoomsFromDB(RMG)
+
 	c := &pkg.Client{
-		Username: "testUser",
+		Username: "B",
 		Rooms:    make(map[string]*pkg.ChatRoom),
 	}
 
-	RMG.CreateRoom("c2")
-	RMG.JoinRoom(c, RMG.GetRoom("c2"))
-
-	room := RMG.GetRoom("c2")
-	if room == nil {
-		log.Fatal("Room c2 not found or not created properly")
-	}
+	RMG.JoinRoom(c, RMG.GetRoom("test"))
 }
