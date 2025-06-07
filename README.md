@@ -84,9 +84,9 @@ curl http://localhost:8081/history?room_id={room_id}
 
 ---
 
-# Run Server Using Docker Compose
+# Run Servers Using Docker Compose
 
-If docker is installed, you can use docker-compose to run server
+You can use docker-compose to run all servers and mongoDB
 
 ``` docker-compose.yml
 version: '3.8'
@@ -140,4 +140,4 @@ copy this docker-compose.yml and run
 docker compose up --build
 ```
 
-Then you don't have to run 3 servers one-by-one
+Then you don't have to run 3 servers and mongoDB one-by-one
