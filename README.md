@@ -81,3 +81,63 @@ try
 ```cmd
 curl http://localhost:8081/history?room_id={room_id}
 ```
+
+---
+
+# Run Server Using Docker Compose
+
+If docker is installed, you can use docker-compose to run server
+
+``` docker-compose.yml
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: chat-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  cluster-manager:
+    image: johseongeon/user-manager:1.0
+    container_name: user-manager
+    ports:
+      - "8082:8082"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+    depends_on:
+      - mongo
+
+  chat-history-provider:
+    image: johseongeon/chat-history-provider:1.0
+    container_name: chat-history-provider
+    ports:
+      - "8081:8081"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+    depends_on:
+      - mongo
+
+  chat-server:
+    image: johseongeon/chat-server:1.0
+    container_name: chat-server
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:
+```
+
+copy this docker-compose.yml and run
+
+```cmd
+docker compose up --build
+```
+
+Then you don't have to run 3 servers one-by-one
