@@ -34,6 +34,45 @@ func (rm *RoomManager) GetRoom(roomID string) *ChatRoom {
 	return nil
 }
 
+func LoadWhileRunning(mgr *RoomManager) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collection := mgr.Client.Database("ChatDB").Collection("rooms")
+	cursor, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		log.Printf("Error loading rooms from DB: %v", err)
+		return
+	}
+	defer cursor.Close(ctx)
+
+	mgr.Mu.Lock()
+	defer mgr.Mu.Unlock()
+
+	for cursor.Next(ctx) {
+		var roomDoc struct {
+			RoomID  string   `bson:"room_id"`
+			Clients []string `bson:"clients"`
+		}
+		if err := cursor.Decode(&roomDoc); err != nil {
+			log.Printf("Error decoding room document: %v", err)
+			continue
+		}
+
+		room, exists := mgr.Rooms[roomDoc.RoomID]
+		if !exists {
+			// 새 room만 생성
+			room = &ChatRoom{
+				Id:      roomDoc.RoomID,
+				Clients: make(map[*Client]bool),
+			}
+			mgr.Rooms[roomDoc.RoomID] = room
+		}
+
+		// 기존 room 객체의 Clients는 유지 (중요)
+	}
+}
+
 func LoadRoomsFromDB(mgr *RoomManager) {
 	mgr.Mu.Lock()
 	defer mgr.Mu.Unlock()

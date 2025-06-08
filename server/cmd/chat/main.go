@@ -16,6 +16,8 @@ var upgrader = websocket.Upgrader{
 
 var RoomMgr = &pkg.RoomManager{}
 
+var userMgr = &pkg.UserManager{}
+
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -41,6 +43,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chatroom := RoomMgr.GetRoom(initMsg.ChatID)
+	client.Rooms[initMsg.ChatID] = chatroom
 	RoomMgr.ConnectToRoom(client, chatroom)
 	log.Printf("User %s joined chat %s", client.Username, initMsg.ChatID)
 
@@ -87,6 +90,14 @@ func main() {
 	pkg.MessageLog.Client = client
 	RoomMgr.Client = client
 	pkg.LoadRoomsFromDB(RoomMgr)
+
+	// RoomManager 동기화
+	go func() {
+		for {
+			pkg.LoadWhileRunning(RoomMgr)
+			time.Sleep(3 * time.Second)
+		}
+	}()
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
