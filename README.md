@@ -96,6 +96,7 @@ You can use docker-compose to run all servers and mongoDB
 
 ![Image](https://github.com/user-attachments/assets/ca5ca661-6153-4e0f-9b88-29345f7aa1cb)
 
+<docker-compose.yml>
 ``` docker-compose.yml
 version: '3.8'
 
