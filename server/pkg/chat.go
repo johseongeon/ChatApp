@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Client struct {
@@ -29,13 +28,6 @@ type ChatMessage struct {
 	RoomID    string    `json:"room_id" bson:"room_id"`
 	Timestamp time.Time `json:"timestamp" bson:"timestamp"`
 }
-
-type ClusterManager struct {
-	Mu     sync.Mutex
-	Client *mongo.Client
-}
-
-var ClusterMgr = &ClusterManager{}
 
 func EnableCORS(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")

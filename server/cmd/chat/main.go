@@ -16,8 +16,6 @@ var upgrader = websocket.Upgrader{
 
 var RoomMgr = &pkg.RoomManager{}
 
-var userMgr = &pkg.UserManager{}
-
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -85,7 +83,7 @@ func main() {
 	log.Println("Server started on :8080")
 	client, err := pkg.ConnectMongoDB()
 	if err != nil {
-		log.Fatal("MongoDB 연결 실패:", err)
+		log.Fatal("Failed to connect MongoDB:", err)
 	}
 	pkg.MessageLog.Client = client
 	RoomMgr.Client = client

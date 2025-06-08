@@ -22,6 +22,14 @@ func main() {
 	RoomMgr := &pkg.RoomManager{Client: client}
 	pkg.LoadRoomsFromDB(RoomMgr)
 
+	// RoomManager 동기화
+	go func() {
+		for {
+			pkg.LoadWhileRunning(RoomMgr)
+			time.Sleep(3 * time.Second)
+		}
+	}()
+
 	Collection.MessageCol = client.Database("ChatDB").Collection("users")
 
 	//register

@@ -35,7 +35,7 @@ func (rm *RoomManager) GetRoom(roomID string) *ChatRoom {
 }
 
 func LoadWhileRunning(mgr *RoomManager) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	collection := mgr.Client.Database("ChatDB").Collection("rooms")
@@ -61,15 +61,13 @@ func LoadWhileRunning(mgr *RoomManager) {
 
 		room, exists := mgr.Rooms[roomDoc.RoomID]
 		if !exists {
-			// 새 room만 생성
+			// 기존에 없던 새 room만 생성
 			room = &ChatRoom{
 				Id:      roomDoc.RoomID,
 				Clients: make(map[*Client]bool),
 			}
 			mgr.Rooms[roomDoc.RoomID] = room
 		}
-
-		// 기존 room 객체의 Clients는 유지 (중요)
 	}
 }
 
@@ -93,7 +91,7 @@ func LoadRoomsFromDB(mgr *RoomManager) {
 	for cursor.Next(ctx) {
 		var roomDoc struct {
 			RoomID  string   `bson:"room_id"`
-			Clients []string `bson:"clients"` // 클라이언트 목록은 현재 필요 없지만 추후 확장 가능
+			Clients []string `bson:"clients"` 
 		}
 
 		if err := cursor.Decode(&roomDoc); err != nil {
