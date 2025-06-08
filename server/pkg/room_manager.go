@@ -91,7 +91,7 @@ func LoadRoomsFromDB(mgr *RoomManager) {
 	for cursor.Next(ctx) {
 		var roomDoc struct {
 			RoomID  string   `bson:"room_id"`
-			Clients []string `bson:"clients"` 
+			Clients []string `bson:"clients"`
 		}
 
 		if err := cursor.Decode(&roomDoc); err != nil {
