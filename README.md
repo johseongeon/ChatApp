@@ -6,7 +6,9 @@
 
 Go server for flutter chatting app
 
-Make sure that MongoDB is installed on your local system, and mongo server is listening at port 27017
+Make sure that MongoDB is installed on your local system, and mongo server is listening at port 27017(localhost)
+
+or you can use the `MONGO_URI` environment variable to connect to MongoDB.
 
 ---
 
