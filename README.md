@@ -21,6 +21,8 @@ Make sure that MongoDB is installed on your local system, and mongo server is li
 ## user_manager server
 - server/cmd/user_manager : http server for register, managing friends and chatrooms
 
+![Image](https://github.com/user-attachments/assets/9a49537f-678b-42f2-bed5-1e19dcc9b169)
+
 start server first
 
 ```cmd
@@ -49,6 +51,8 @@ curl http://localhost:8082/getRooms?username={username}
 ## real-time chatting server
 - server/cmd/chat/main.go : websocket server for real-time chatting
 
+![Image](https://github.com/user-attachments/assets/a654aa70-a3da-4822-9c23-bd67e40df0e9)
+
 - You must create room and invite users to the room before test.
 - If not, it returns a nil value, which causes an error.
 
@@ -71,6 +75,8 @@ dart run main.dart {username} {chatroom_id}
 
 - server/cmd/chat_history_provider/main.go : http server for providing chat history
 
+![Image](https://github.com/user-attachments/assets/c47c9cd5-5d93-40bd-b98e-967e5c901685)
+
 start server first
 ```cmd
 cd server/cmd/chat_history_provider
@@ -88,6 +94,9 @@ curl http://localhost:8081/history?room_id={room_id}
 
 You can use docker-compose to run all servers and mongoDB
 
+![Image](https://github.com/user-attachments/assets/ca5ca661-6153-4e0f-9b88-29345f7aa1cb)
+
+<docker-compose.yml>
 ``` docker-compose.yml
 version: '3.8'
 
