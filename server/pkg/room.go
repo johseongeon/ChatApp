@@ -8,6 +8,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // handles all chat room operations
@@ -22,6 +23,7 @@ var RoomMgr = &RoomManager{
 	Client: nil,
 }
 
+// getter
 func (rm *RoomManager) GetRoom(roomID string) *ChatRoom {
 	rm.Mu.Lock()
 	defer rm.Mu.Unlock()
@@ -31,6 +33,62 @@ func (rm *RoomManager) GetRoom(roomID string) *ChatRoom {
 	}
 
 	return nil
+}
+
+func (rm *RoomManager) CreateRoom(roomID string) {
+	rm.Mu.Lock()
+	defer rm.Mu.Unlock()
+
+	room := &ChatRoom{
+		Id:      roomID,
+		Clients: make(map[*Client]bool),
+	}
+	rm.Rooms[roomID] = room
+
+	// Update the MongoDB collection to add the room
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	collection := rm.Client.Database("ChatDB").Collection("rooms")
+	filter := map[string]interface{}{"room_id": roomID}
+	update := map[string]interface{}{
+		"$setOnInsert": map[string]interface{}{
+			"room_id": roomID,
+			"clients": []string{},
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+	_, err := collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		log.Println("Error creating room:", err)
+		return
+	}
+}
+
+func (adder *UserManager) GetRooms(c *Client) []string {
+	adder.Mu.Lock()
+	defer adder.Mu.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collection := adder.Client.Database("ChatDB").Collection("users")
+
+	filter := map[string]interface{}{"username": c.Username}
+	projection := map[string]interface{}{
+		"rooms": 1,
+	}
+
+	var result struct {
+		Rooms []string `bson:"rooms"`
+	}
+
+	err := collection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		log.Println("Error getting rooms:", err)
+		return nil
+	}
+
+	return result.Rooms
 }
 
 func LoadWhileRunning(mgr *RoomManager) {
@@ -106,6 +164,49 @@ func LoadRoomsFromDB(mgr *RoomManager) {
 
 	if err := cursor.Err(); err != nil {
 		log.Printf("Cursor error after iteration: %v", err)
+	}
+}
+
+func (rm *RoomManager) JoinRoom(c *Client, room *ChatRoom) {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
+
+	room.Mu.Lock()
+	defer room.Mu.Unlock()
+
+	c.Rooms[room.Id] = room
+	room.Clients[c] = true
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	userCollection := rm.Client.Database("ChatDB").Collection("users")
+
+	userFilter := map[string]interface{}{"username": c.Username}
+	userUpdate := map[string]interface{}{
+		"$addToSet": map[string]interface{}{
+			"rooms": room.Id,
+		},
+	}
+
+	_, err := userCollection.UpdateOne(ctx, userFilter, userUpdate)
+	if err != nil {
+		log.Println("Error updating user's rooms in 'users' collection:", err)
+		return
+	}
+
+	roomCollection := rm.Client.Database("ChatDB").Collection("rooms")
+
+	roomFilter := map[string]interface{}{"room_id": room.Id}
+	roomUpdate := map[string]interface{}{
+		"$addToSet": map[string]interface{}{
+			"clients": c.Username,
+		},
+	}
+
+	_, err = roomCollection.UpdateOne(ctx, roomFilter, roomUpdate)
+	if err != nil {
+		log.Println("Error updating room's clients in 'rooms' collection:", err)
 	}
 }
 
